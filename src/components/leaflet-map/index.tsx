@@ -5,11 +5,15 @@ import {
   useStyles$,
   useVisibleTask$,
 } from "@builder.io/qwik";
-import { Map } from "leaflet";
-import type { MapProps } from "~/models/map";
+import { Map, LatLngBounds } from "leaflet";
+import type { LocationsProps } from "~/models/location";
 
-export const LeafletMap = component$<MapProps>(({ location }: MapProps) => {
-  // Modify with your preferences. By default take all screen
+interface LeafletMapProps {
+  locations: LocationsProps[];
+  currentLocation: LocationsProps | null;
+}
+
+export const LeafletMap = component$<LeafletMapProps>(({ locations, currentLocation }: LeafletMapProps) => {
   useStyles$(`
     #map {
       width: 100%;
@@ -20,41 +24,42 @@ export const LeafletMap = component$<MapProps>(({ location }: MapProps) => {
   const mapContainer$ = useSignal<Map>();
 
   useVisibleTask$(async ({ track }) => {
-    track(location);
+    track(() => locations); // Track changes to locations
+    track(() => currentLocation); // Track changes to currentLocation
 
     const { tileLayer, marker } = await import("leaflet");
-
-    const { getBoundaryBox } = await import("../../helpers/boundary-box");
 
     if (mapContainer$.value) {
       mapContainer$.value.remove();
     }
 
-    const { value: locationData } = location;
-
-    const centerPosition: [number, number] = locationData.point as [
-      number,
-      number,
-    ];
-
-    const map: any = new Map("map").setView(
-      centerPosition,
-      locationData.zoom || 14,
-    );
+    const map = new Map("map").setView([41.015137, 28.979530], 6); // Default view to Turkey
 
     tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution:
-        '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
 
-    // Assign select boundary box to use in OSM API if you want
-    locationData.boundaryBox = getBoundaryBox(map);
-
-    locationData.marker &&
-      marker(centerPosition).bindPopup(`Soraluze (Gipuzkoa) :)`).addTo(map);
+    if (currentLocation) {
+      const centerPosition: [number, number] = currentLocation.point as [number, number];
+      if (currentLocation.marker) {
+        marker(centerPosition).bindPopup(`Marker at [${centerPosition}]`).addTo(map);
+      }
+      map.setView(centerPosition, currentLocation.zoom || 15);
+    } else {
+      const bounds = new LatLngBounds(locations.map(loc => loc.point as [number, number]));
+      map.fitBounds(bounds);
+      locations.forEach((location) => {
+        const centerPosition: [number, number] = location.point as [number, number];
+        if (location.marker) {
+          marker(centerPosition).bindPopup(`Marker at [${centerPosition}]`).addTo(map);
+        }
+      });
+    }
 
     mapContainer$.value = noSerialize(map);
   });
+
   return <div id="map"></div>;
 });

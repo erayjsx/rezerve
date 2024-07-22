@@ -7,3 +7,7 @@
 html, body {
     font-family: 'Euclid Circular A', sans-serif !important;
 }
+
+#map {
+    z-index: 1;
+}
