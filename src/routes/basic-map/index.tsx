@@ -92,7 +92,14 @@ export default component$(() => {
     );
 });
 
-const Item = component$(({ title, desc, status, onClick$ }) => {
+interface ItemProps {
+    title: string;
+    desc: string;
+    status: string;
+    onClick$: () => void;
+  }
+
+const Item = component$(({ title, desc, status, onClick$ }: ItemProps) => {
     return (
         <div class="hover:bg-zinc-100 flex border-b items-center justify-start h-24 w-full px-4">
             <button onClick$={onClick$} class="flex flex-col gap-1 flex-1">
